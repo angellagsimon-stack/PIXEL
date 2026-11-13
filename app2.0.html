@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi cuaderno Pixel Art</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#292532;background:#f7f4f8}
+*{box-sizing:border-box}body{margin:0;padding:16px;max-width:1150px;margin-inline:auto}
+h1{font-size:1.55rem;margin:4px 0}.sub{color:#6e6874;margin:0 0 18px}
+.panel{background:white;border:1px solid #e5dfe9;border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 10px #3020400a}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+label{display:flex;flex-direction:column;gap:5px;font-size:.88rem;color:#5f5866}
+input[type=number],select{width:105px;padding:10px;border:1px solid #d9d1df;border-radius:9px;font:inherit;background:#fff}
+select{width:auto;min-width:110px}
+input[type=color]{width:48px;height:42px;border:0;background:none;padding:0}
+button,.filelabel{border:1px solid #ded6e4;border-radius:10px;padding:10px 13px;background:#fff;color:#342d3b;font-weight:600;font-size:.9rem;cursor:pointer}
+button.primary{background:#7952a3;color:#fff;border-color:#7952a3}
+button.active{background:#eee5f7;border-color:#a98ac6;color:#563779}
+button:disabled{opacity:.4;cursor:not-allowed}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.palette{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.swatch{width:29px;height:29px;border-radius:8px;border:2px solid #ddd;cursor:pointer}
+.swatch.selected{outline:3px solid #8060a0;outline-offset:2px}
+
+/* Contenedor con regla estilo Word */
+#boardContainer{display:flex;flex-direction:column;background:#f0edf2;border-radius:12px;padding:10px;max-height:70vh;overflow:auto}
+.ruler-row{display:flex}
+.corner-ruler{width:26px;min-width:26px;background:#e5dfec;border-right:1px solid #d3c9df;border-bottom:1px solid #d3c9df;font-size:9px;color:#7a6d8c;display:flex;align-items:center;justify-content:center}
+#rulerTop{height:26px;background:#e5dfec;border-bottom:1px solid #d3c9df;position:relative;overflow:hidden}
+.ruler-middle{display:flex}
+#rulerLeft{width:26px;background:#e5dfec;border-right:1px solid #d3c9df;position:relative;overflow:hidden}
+#boardWrap{overflow:hidden;background:#fff;flex-grow:1}
+#board{display:grid;gap:1px;background:#bdb7c3;width:max-content;touch-action:none;user-select:none}
+.cell{background:#fff;min-width:5px;min-height:5px;touch-action:none}
+
+/* Marcas de regla */
+.ruler-mark-h{position:absolute;bottom:0;width:1px;background:#b5a9c5}
+.ruler-num-h{position:absolute;bottom:8px;font-size:9px;color:#6b5d7d;transform:translateX(-50%);white-space:nowrap}
+.ruler-mark-v{position:absolute;right:0;height:1px;background:#b5a9c5}
+.ruler-num-v{position:absolute;right:4px;font-size:9px;color:#6b5d7d;transform:translateY(-50%);white-space:nowrap}
+.ruler-center{position:absolute;background:#e74c3c !important;z-index:2}
+.ruler-center-label{position:absolute;font-size:8px;font-weight:700;color:#fff;background:#e74c3c;padding:1px 3px;border-radius:3px;z-index:3;white-space:nowrap}
+
+.hint{font-size:.82rem;color:#77717e;line-height:1.45}
+.status{font-size:.85rem;color:#6b5a78}
+.total{font-weight:700;color:#65448a;background:#f2ebf8;padding:8px 11px;border-radius:9px;display:inline-block;font-size:.9rem}
+.ruler-box{margin-top:12px;padding:11px 13px;background:#faf8fc;border:1px dashed #d3c6e0;border-radius:11px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.badge{padding:5px 10px;border-radius:8px;font-size:.83rem;font-weight:700}
+.badge.ok{background:#e4f5ea;color:#236b3c}
+.badge.warn{background:#fff0db;color:#995400}
+.split-options{margin-top:12px;padding:11px 13px;background:#fff8ee;border:1px solid #f2d5ad;border-radius:11px;display:none;flex-wrap:wrap;gap:12px;align-items:center}
+.split-options.visible{display:flex}
+@media(max-width:560px){body{padding:10px}.panel{padding:11px}button,.filelabel{padding:9px 10px}.sub{font-size:.9rem}}
+</style>
+</head>
+<body>
+<h1>🎨 Mi cuaderno Pixel Art</h1>
+<p class="sub">Crea tu propia cuadrícula, guíate con la regla de centro A4 y pinta a tu manera.</p>
+
+<section class="panel">
+  <strong>1. Tamaño de tu lienzo y regla de medida</strong>
+  <div class="controls" style="margin-top:10px">
+    <label>Columnas<input id="cols" type="number" min="1" max="120" value="32"></label>
+    <label>Filas<input id="rows" type="number" min="1" max="120" value="32"></label>
+    <div class="total" id="totalPreview">Total: 1,024 cuadritos</div>
+    <button class="primary" id="newBtn" type="button">Crear / Actualizar lienzo</button>
+  </div>
+
+  <div class="ruler-box">
+    <div class="controls">
+      <label>Medida por cuadrito<input id="cellSize" type="number" step="0.05" min="0.05" max="10" value="0.5"></label>
+      <label>Unidad
+        <select id="unit">
+          <option value="cm">Centímetros (cm)</option>
+          <option value="in">Pulgadas (in)</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <div style="font-size:.92rem;font-weight:700;color:#3b2d4a" id="physicalSize">📏 Tamaño real: 16.0 × 16.0 cm</div>
+      <div style="margin-top:4px"><span class="badge ok" id="a4Status">✅ Cabe en 1 hoja A4 (21.0 × 29.7 cm)</span></div>
+    </div>
+  </div>
+  <p class="hint">Las reglas exteriores muestran las medidas y marcan en rojo la línea central exacta de una hoja A4 (10.5 cm horizontal y 14.85 cm vertical).</p>
+</section>
+
+<section class="panel">
+  <strong>2. Herramientas</strong>
+  <div class="tools" style="margin-top:10px">
+    <button class="active" data-tool="pencil" type="button">✏️ Lápiz</button>
+    <button data-tool="eraser" type="button">🧽 Borrador</button>
+    <button data-tool="fill" type="button">🪣 Relleno</button>
+    <button id="undo" type="button">↶ Deshacer</button>
+    <button id="redo" type="button">↷ Rehacer</button>
+    <button id="clear" type="button">Limpiar todo</button>
+  </div>
+</section>
+
+<section class="panel">
+  <strong>3. Elige tus colores</strong>
+  <div class="controls" style="margin-top:10px">
+    <label>Color personalizado<input id="color" type="color" value="#e78aaa"></label>
+    <span class="hint">También puedes elegir un color de la paleta:</span>
+  </div>
+  <div class="palette" id="palette" style="margin-top:12px"></div>
+</section>
+
+<section class="panel">
+  <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+    <strong>4. Tu lienzo con regla de centro</strong><span class="status" id="dimensions">32 × 32 · 1,024 cuadritos</span>
+  </div>
+  
+  <!-- Interfaz de Regla Estilo Word -->
+  <div id="boardContainer">
+    <div class="ruler-row">
+      <div class="corner-ruler">cm</div>
+      <div id="rulerTop"></div>
+    </div>
+    <div class="ruler-middle">
+      <div id="rulerLeft"></div>
+      <div id="boardWrap"><div id="board" aria-label="Cuadrícula de dibujo"></div></div>
+    </div>
+  </div>
+
+  <p class="hint" style="margin-top:10px">En PC: haz clic y arrastra. En celular: toca y desliza el dedo sobre los cuadritos para pintar.</p>
+</section>
+
+<section class="panel">
+  <strong>5. Guardar e imprimir tu creación</strong>
+  
+  <div class="split-options" id="splitPanel">
+    <span style="font-size:.88rem;color:#7a4400;font-weight:600">⚠️ Tu diseño supera el tamaño A4. ¿Cómo deseas generar el PDF?</span>
+    <select id="pdfMode">
+      <option value="fit">Ajustar todo en 1 sola hoja A4 (reducir escala)</option>
+      <option value="split-v">Dividir a tamaño real en hojas A4 Verticales</option>
+      <option value="split-h">Dividir a tamaño real en hojas A4 Horizontales</option>
+    </select>
+    <span class="hint" id="pagesCount" style="color:#8a5308;font-weight:600"></span>
+  </div>
+
+  <div class="tools" style="margin-top:12px">
+    <button class="primary" id="png" type="button">⬇ Descargar PNG</button>
+    <button class="primary" id="pdf" type="button">📄 Descargar PDF</button>
+    <button id="save" type="button">Guardar proyecto editable</button>
+    <label class="filelabel">Abrir proyecto<input id="open" type="file" accept=".pixelart,.json,application/json" hidden></label>
+  </div>
+  <p class="hint">Si divides el PDF a tamaño real, cada hoja incluirá su número de página para unirlas fácilmente al imprimir.</p>
+</section>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let rows=32,cols=32,pixels=[],tool='pencil',color='#e78aaa',undoStack=[],redoStack=[],drawing=false,lastIndex=-1;
+const palette=['#000000','#ffffff','#e78aaa','#e9c65b','#85b6dc','#83b77a','#a68ac6','#c17c55','#f29b63','#d95757','#a8d8ce','#777777','#f4c6d7','#6b4b83','#f3a6a6','#34495e'];
+const cellSizePx=16; // Tamaño visual fijo por celda en pantalla
+
+function format(n){return new Intl.NumberFormat('es-PE').format(n)}
+
+function getPhysicalMetrics(){
+  const c=parseInt($('cols').value,10)||1;
+  const r=parseInt($('rows').value,10)||1;
+  const size=parseFloat($('cellSize').value)||0.5;
+  const unit=$('unit').value;
+  const w=c*size, h=r*size;
+  const wCm=unit==='cm'?w:w*2.54;
+  const hCm=unit==='cm'?h:h*2.54;
+  return {c,r,size,unit,w,h,wCm,hCm};
+}
+
+function updateTotalPreview(){
+  const {c,r,unit,w,h,wCm,hCm}=getPhysicalMetrics();
+  $('totalPreview').textContent=(Number.isInteger(c)&&Number.isInteger(r)&&c>0&&r>0&&c<=120&&r<=120)?`Total: ${format(c*r)} cuadritos`:'Ingresa valores de 1 a 120';
+  
+  const a4LimitText=unit==='cm'?'21.0 × 29.7 cm':'8.27 × 11.69 in';
+  $('physicalSize').textContent=`📏 Tamaño real: ${w.toFixed(2)} × ${h.toFixed(2)} ${unit}`;
+  
+  const fitsPortrait=(wCm<=19.0 && hCm<=27.2);
+  const fitsLandscape=(wCm<=27.7 && hCm<=18.5);
+  const badge=$('a4Status');
+  const splitPanel=$('splitPanel');
+
+  if(fitsPortrait || fitsLandscape){
+    badge.className='badge ok';
+    badge.textContent=`✅ Cabe en 1 hoja A4 (${a4LimitText})`;
+    splitPanel.classList.remove('visible');
+  }else{
+    badge.className='badge warn';
+    badge.textContent=`⚠️ Supera el tamaño A4 (${a4LimitText})`;
+    splitPanel.classList.add('visible');
+    updatePagesPreview();
+  }
+  drawRulers();
+}
+
+function updatePagesPreview(){
+  const {wCm,hCm}=getPhysicalMetrics();
+  const mode=$('pdfMode').value;
+  if(mode==='fit'){
+    $('pagesCount').textContent='(Se imprimirá en 1 hoja)';
+    return;
+  }
+  const usableW=mode==='split-h'?27.5:18.8;
+  const usableH=mode==='split-h'?18.2:26.8;
+  const pagesX=Math.ceil(wCm/usableW);
+  const pagesY=Math.ceil(hCm/usableH);
+  $('pagesCount').textContent=`(Generará ${pagesX*pagesY} hojas: ${pagesX} ancho × ${pagesY} alto)`;
+}
+
+// Dibuja las reglas estilo Word con marcas y centro A4
+function drawRulers(){
+  const {size,unit}=getPhysicalMetrics();
+  const rulerTop=$('rulerTop');
+  const rulerLeft=$('rulerLeft');
+  rulerTop.innerHTML='';
+  rulerLeft.innerHTML='';
+
+  const totalW=cols*cellSizePx;
+  const totalH=rows*cellSizePx;
+  rulerTop.style.width=`${totalW}px`;
+  rulerLeft.style.height=`${totalH}px`;
+
+  // Calcular cada cuántos pixeles va una unidad principal
+  const pxPerUnit = size>0?(cellSizePx/size):cellSizePx; // pixeles por cm o pulgada
+  const maxValW = cols*size;
+  const maxValH = rows*size;
+
+  // Marcas en la regla superior (Horizontal)
+  for(let v=0; v<=maxValW; v+= (unit==='cm'?1:0.5)){
+    const x = v*pxPerUnit;
+    if(x > totalW) break;
+    const mark=document.createElement('div');
+    mark.className='ruler-mark-h';
+    mark.style.left=`${x}px`;
+    mark.style.height=(v%(unit==='cm'?5:1)===0)?'10px':'5px';
+    rulerTop.appendChild(mark);
+
+    if(v%(unit==='cm'?2:1)===0 || v===0){
+      const num=document.createElement('div');
+      num.className='ruler-num-h';
+      num.style.left=`${x}px`;
+      num.textContent=v;
+      rulerTop.appendChild(num);
+    }
+  }
+
+  // Marcas en la regla izquierda (Vertical)
+  for(let v=0; v<=maxValH; v+= (unit==='cm'?1:0.5)){
+    const y = v*pxPerUnit;
+    if(y > totalH) break;
+    const mark=document.createElement('div');
+    mark.className='ruler-mark-v';
+    mark.style.top=`${y}px`;
+    mark.style.width=(v%(unit==='cm'?5:1)===0)?'10px':'5px';
+    rulerLeft.appendChild(mark);
+
+    if(v%(unit==='cm'?2:1)===0 || v===0){
+      const num=document.createElement('div');
+      num.className='ruler-num-v';
+      num.style.top=`${y}px`;
+      num.textContent=v;
+      rulerLeft.appendChild(num);
+    }
+  }
+
+  // Indicador de Centro A4 (Mitad de A4 en cm: 10.5 cm ancho, 14.85 cm alto)
+  const a4CenterX_cm = 10.5;
+  const a4CenterY_cm = 14.85;
+
+  const unitFactor = unit==='cm'?1:(1/2.54);
+  const cx = (a4CenterX_cm * unitFactor) * pxPerUnit;
+  const cy = (a4CenterY_cm * unitFactor) * pxPerUnit;
+
+  if(cx <= totalW){
+    const centerMarkH=document.createElement('div');
+    centerMarkH.className='ruler-center';
+    centerMarkH.style.left=`${cx}px`;
+    centerMarkH.style.top=`0`;
+    centerMarkH.style.width=`2px`;
+    centerMarkH.style.height=`100%`;
+    rulerTop.appendChild(centerMarkH);
+
+    const centerLabelH=document.createElement('div');
+    centerLabelH.className='ruler-center-label';
+    centerLabelH.style.left=`${cx}px`;
+    centerLabelH.style.top=`2px`;
+    centerLabelH.style.transform=`translateX(-50%)`;
+    centerLabelH.textContent=`Centro A4`;
+    rulerTop.appendChild(centerLabelH);
+  }
+
+  if(cy <= totalH){
+    const centerMarkV=document.createElement('div');
+    centerMarkV.className='ruler-center';
+    centerMarkV.style.left=`0`;
+    centerMarkV.style.top=`${cy}px`;
+    centerMarkV.style.height=`2px`;
+    centerMarkV.style.width=`100%`;
+    rulerLeft.appendChild(centerMarkV);
+
+    const centerLabelV=document.createElement('div');
+    centerLabelV.className='ruler-center-label';
+    centerLabelV.style.left=`2px`;
+    centerLabelV.style.top=`${cy}px`;
+    centerLabelV.style.transform=`translateY(-50%)`;
+    centerLabelV.style.fontSize=`7px`;
+    centerLabelV.textContent=`Centro A4`;
+    rulerLeft.appendChild(centerLabelV);
+  }
+}
+
+$('cols').addEventListener('input',updateTotalPreview);
+$('rows').addEventListener('input',updateTotalPreview);
+$('cellSize').addEventListener('input',updateTotalPreview);
+$('unit').addEventListener('change',updateTotalPreview);
+$('pdfMode').addEventListener('change',updatePagesPreview);
+
+function snapshot(){undoStack.push({rows,cols,pixels:[...pixels]});if(undoStack.length>80)undoStack.shift();redoStack=[];updateHistory()}
+function updateHistory(){$('undo').disabled=!undoStack.length;$('redo').disabled=!redoStack.length}
+function drawBoard(){
+ const board=$('board');board.innerHTML='';board.style.gridTemplateColumns=`repeat(${cols}, ${cellSizePx}px)`;
+ const frag=document.createDocumentFragment();
+ pixels.forEach((v,i)=>{const d=document.createElement('div');d.className='cell';d.style.width=`${cellSizePx}px`;d.style.height=`${cellSizePx}px`;d.style.background=v;d.dataset.i=i;frag.appendChild(d)});
+ board.appendChild(frag);$('dimensions').textContent=`${cols} columnas × ${rows} filas · ${format(cols*rows)} cuadritos`;
+ drawRulers();
+}
+function setPixel(i,c){if(i<0||i>=pixels.length||pixels[i]===c)return;pixels[i]=c;const el=$('board').children[i];if(el)el.style.background=c}
+function paint(i){if(tool==='fill'){flood(i);return}setPixel(i,tool==='eraser'?'#ffffff':color)}
+function flood(start){
+ const target=pixels[start],replacement=color;if(target===replacement)return;
+ const stack=[start],seen=new Set();
+ while(stack.length){const i=stack.pop();if(i<0||i>=pixels.length||seen.has(i)||pixels[i]!==target)continue;seen.add(i);pixels[i]=replacement;
+ const x=i%cols,y=Math.floor(i/cols);if(x>0)stack.push(i-1);if(x<cols-1)stack.push(i+1);if(y>0)stack.push(i-cols);if(y<rows-1)stack.push(i+cols)}
+ drawBoard();
+}
+function indexFromEvent(e){const el=document.elementFromPoint(e.clientX,e.clientY);if(!el||!el.classList.contains('cell'))return -1;return Number(el.dataset.i)}
+function start(e){const i=indexFromEvent(e);if(i<0)return;e.preventDefault();if(tool==='fill'){snapshot();paint(i);return}snapshot();drawing=true;lastIndex=i;paint(i)}
+function move(e){if(!drawing)return;e.preventDefault();const i=indexFromEvent(e);if(i>=0&&i!==lastIndex){lastIndex=i;paint(i)}}
+function end(){drawing=false;lastIndex=-1}
+$('board').addEventListener('pointerdown',start);window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b))}));
+$('color').addEventListener('input',e=>{color=e.target.value;tool='pencil';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='pencil'))});
+function makePalette(){const p=$('palette');palette.forEach(c=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.style.background=c;b.title=c;b.setAttribute('aria-label',c);b.addEventListener('click',()=>{color=c;$('color').value=c;tool='pencil';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='pencil'));document.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('selected',x===b))});p.appendChild(b)})}
+
+$('newBtn').addEventListener('click',()=>{
+ const c=parseInt($('cols').value,10);
+ const r=parseInt($('rows').value,10);
+ if(!Number.isInteger(c)||!Number.isInteger(r)||c<1||r<1||c>120||r>120){alert('Elige entre 1 y 120 filas y columnas.');return}
+ const hasDrawing=pixels.some(p=>p!=='#ffffff');
+ if(hasDrawing && !confirm('¿Crear un lienzo nuevo? El dibujo actual se reemplazará. Guarda tu proyecto si quieres conservarlo.'))return;
+ rows=r;cols=c;pixels=Array(rows*cols).fill('#ffffff');undoStack=[];redoStack=[];drawBoard();updateHistory();updateTotalPreview();
+});
+
+$('undo').addEventListener('click',()=>{if(!undoStack.length)return;redoStack.push({rows,cols,pixels:[...pixels]});const s=undoStack.pop();rows=s.rows;cols=s.cols;pixels=s.pixels;$('rows').value=rows;$('cols').value=cols;updateTotalPreview();drawBoard();updateHistory()});
+$('redo').addEventListener('click',()=>{if(!redoStack.length)return;undoStack.push({rows,cols,pixels:[...pixels]});const s=redoStack.pop();rows=s.rows;cols=s.cols;pixels=s.pixels;$('rows').value=rows;$('cols').value=cols;updateTotalPreview();drawBoard();updateHistory()});
+$('clear').addEventListener('click',()=>{if(!confirm('¿Borrar todo el dibujo?'))return;snapshot();pixels=Array(rows*cols).fill('#ffffff');drawBoard()});
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+$('png').addEventListener('click',()=>{const scale=12,canvas=document.createElement('canvas');canvas.width=cols*scale;canvas.height=rows*scale;const ctx=canvas.getContext('2d');pixels.forEach((c,i)=>{ctx.fillStyle=c;ctx.fillRect((i%cols)*scale,Math.floor(i/cols)*scale,scale,scale)});canvas.toBlob(b=>download(b,'mi-pixel-art.png'),'image/png')});
+
+$('pdf').addEventListener('click',()=>{
+ const {size,unit,w,h,wCm,hCm}=getPhysicalMetrics();
+ const fitsPortrait=(wCm<=19.0 && hCm<=27.2);
+ const fitsLandscape=(wCm<=27.7 && hCm<=18.5);
+ const isOversized=!(fitsPortrait || fitsLandscape);
+ const mode=isOversized?$('pdfMode').value:'fit';
+
+ const cmToPt=28.3465;
+ const cellPt=(unit==='cm'?size:size*2.54)*cmToPt;
+ const margin=30, header=28;
+
+ if(mode==='fit'){
+   const landscape=!fitsPortrait && fitsLandscape;
+   const pageW=landscape?841.89:595.28;
+   const pageH=landscape?595.28:841.89;
+   const scale=Math.min((pageW-2*margin)/cols,(pageH-2*margin-header)/rows);
+   const artW=cols*scale,artH=rows*scale,left=(pageW-artW)/2,bottom=(pageH-artH-header)/2;
+   let stream=`BT /F1 11 Tf 1 0 0 1 ${margin} ${pageH-24} Tm (Mi Pixel Art - ${cols}x${rows} | Real: ${w.toFixed(1)}x${h.toFixed(1)} ${unit}) Tj ET\n`;
+   pixels.forEach((hex,i)=>{
+     const hx=hex.replace('#','');const r=parseInt(hx.slice(0,2),16)/255,g=parseInt(hx.slice(2,4),16)/255,b=parseInt(hx.slice(4,6),16)/255;
+     const x=left+(i%cols)*scale,y=bottom+(rows-1-Math.floor(i/cols))*scale;
+     stream+=`${r.toFixed(4)} ${g.toFixed(4)} ${b.toFixed(4)} rg ${x.toFixed(3)} ${y.toFixed(3)} ${(scale+0.05).toFixed(3)} ${(scale+0.05).toFixed(3)} re f\n`;
+   });
+   buildAndDownloadPDF([{pageW,pageH,stream}],'mi-pixel-art.pdf');
+   return;
+ }
+
+ const isHoriz=(mode==='split-h');
+ const pageW=isHoriz?841.89:595.28;
+ const pageH=isHoriz?595.28:841.89;
+ const usableW=pageW-2*margin;
+ const usableH=pageH-2*margin-header;
+
+ const colsPerPage=Math.max(1,Math.floor(usableW/cellPt));
+ const rowsPerPage=Math.max(1,Math.floor(usableH/cellPt));
+ const totalPagesX=Math.ceil(cols/colsPerPage);
+ const totalPagesY=Math.ceil(rows/rowsPerPage);
+ const totalPages=totalPagesX*totalPagesY;
+
+ const pages=[];
+ let pageNum=1;
+ for(let py=0;py<totalPagesY;py++){
+   for(let px=0;px<totalPagesX;px++){
+     const startCol=px*colsPerPage;
+     const endCol=Math.min(cols,startCol+colsPerPage);
+     const startRow=py*rowsPerPage;
+     const endRow=Math.min(rows,startRow+rowsPerPage);
+
+     let stream=`BT /F1 10 Tf 1 0 0 1 ${margin} ${pageH-22} Tm (Hoja ${pageNum} de ${totalPages} [Fila ${py+1}, Col ${px+1}] - Escala real: ${size} ${unit}/cuadro) Tj ET\n`;
+     for(let r=startRow;r<endRow;r++){
+       for(let c=startCol;c<endCol;c++){
+         const hex=pixels[r*cols+c];
+         const hx=hex.replace('#','');
+         const red=parseInt(hx.slice(0,2),16)/255,grn=parseInt(hx.slice(2,4),16)/255,blu=parseInt(hx.slice(4,6),16)/255;
+         const x=margin+(c-startCol)*cellPt;
+         const y=(pageH-margin-header)-(r-startRow+1)*cellPt;
+         stream+=`${red.toFixed(4)} ${grn.toFixed(4)} ${blu.toFixed(4)} rg ${x.toFixed(3)} ${y.toFixed(3)} ${(cellPt+0.05).toFixed(3)} ${(cellPt+0.05).toFixed(3)} re f\n`;
+       }
+     }
+     pages.push({pageW,pageH,stream});
+     pageNum++;
+   }
+ }
+ buildAndDownloadPDF(pages,`mi-pixel-art-dividido-${totalPages}hojas.pdf`);
+});
+
+function buildAndDownloadPDF(pages,filename){
+ const pageObjIds=pages.map((_,idx)=>4+idx*2);
+ const objects=[
+  '<< /Type /Catalog /Pages 2 0 R >>',
+  `<< /Type /Pages /Kids [${pageObjIds.map(id=>id+' 0 R').join(' ')}] /Count ${pages.length} >>`,
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'
+ ];
+ pages.forEach((p,idx)=>{
+   const contentId=5+idx*2;
+   objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${p.pageW} ${p.pageH}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`);
+   objects.push(`<< /Length ${p.stream.length} >>\nstream\n${p.stream}endstream`);
+ });
+ let pdf='%PDF-1.4\n',offsets=[0];
+ objects.forEach((o,i)=>{offsets.push(pdf.length);pdf+=(i+1)+' 0 obj\n'+o+'\nendobj\n'});
+ const xref=pdf.length;pdf+='xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n';
+ for(let i=1;i<offsets.length;i++)pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+ pdf+='trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+ download(new Blob([pdf],{type:'application/pdf'}),filename);
+}
+
+$('save').addEventListener('click',()=>{const data={format:'pixelart-cuaderno',version:1,rows,cols,pixels};download(new Blob([JSON.stringify(data)],{type:'application/json'}),'mi-proyecto.pixelart')});
+$('open').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.format!=='pixelart-cuaderno'||!Number.isInteger(d.rows)||!Number.isInteger(d.cols)||d.rows<1||d.cols<1||d.rows>120||d.cols>120||!Array.isArray(d.pixels)||d.pixels.length!==d.rows*d.cols||!d.pixels.every(x=>/^#[0-9a-fA-F]{6}$/.test(x)))throw Error();rows=d.rows;cols=d.cols;pixels=d.pixels;undoStack=[];redoStack=[];$('rows').value=rows;$('cols').value=cols;updateTotalPreview();drawBoard();updateHistory()}catch{alert('No pude abrir ese archivo. Selecciona un proyecto creado con este cuaderno.')}e.target.value=''});
+makePalette();pixels=Array(rows*cols).fill('#ffffff');drawBoard();updateHistory();updateTotalPreview();
+})();
+</script>
+</body>
+</html>
